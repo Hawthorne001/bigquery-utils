@@ -40,6 +40,7 @@ SELECT bqutil.fn.int(1.684)
 * [cw_comparable_format_varchar_t](#cw_comparable_format_varchar_tpart-string)
 * [cw_convert_base](#cw_convert_basenumber-string-from_base-int64-to_base-int64)
 * [cw_csvld](#cw_csvldtext-string-comma-string-quote-string-len-int64)
+* [cw_disjoint_all_partitions_by_regexp](#cw_disjoint_all_partitions_by_regexphaystack-string-regex-string)
 * [cw_disjoint_partition_by_regexp](#cw_disjoint_partition_by_regexpfirstrn-int64-haystack-string-regex-string)
 * [cw_editdistance](#cw_editdistancea-string-b-string)
 * [cw_error_number](cw_error_numbererrmsg-string)
@@ -48,6 +49,7 @@ SELECT bqutil.fn.int(1.684)
 * [cw_find_in_list](#cw_find_in_listneedle-string-list-string)
 * [cw_from_base](#cw_from_basenumber-string-base-int64)
 * [cw_getbit](#cw_getbitbits-int64-index-int64)
+* [cw_getbit_binary](#cw_getbit_binarybits-bytes-index-int64)
 * [cw_initcap](#cw_initcaps-string)
 * [cw_instr4](#cw_instr4source-string-search-string-position-int64-ocurrence-int64)
 * [cw_json_array_contains_bool](#cw_json_array_contains_booljson-string-needle-bool)
@@ -160,11 +162,12 @@ SELECT bqutil.fn.int(1.684)
 * [random_int](#random_intmin-any-type-max-any-type)
 * [random_string](#random_stringlength-int64)
 * [random_value](#random_valuearr-any-type)
-* [sure_cond](#sure_cond)
-* [sure_like](#sure_like)
-* [sure_nonnull](#sure_nonnull)
-* [sure_range](#sure_range)
-* [sure_values](#sure_values)
+* [studentt_cdf](#studentt_cdfx-float64-dof-float64)
+* [sure_cond](#sure_condvalue-string-cond-bool)
+* [sure_like](#sure_likevalue-string-like_pattern-string)
+* [sure_nonnull](#sure_nonnullvalue-any-type)
+* [sure_range](#sure_rangevalue-any-type)
+* [sure_values](#sure_valuesvalue-any-type-acceptable_value_array-any-type)
 * [table_url](#table_urltable_id-string)
 * [to_binary](#to_binaryx-int64)
 * [to_hex](#to_hexx-int64)
@@ -183,6 +186,8 @@ SELECT bqutil.fn.int(1.684)
 * [url_parse](#url_parseurlstring-string-parttoextract-string)
 * [url_trim_query](#url_trim_queryurl-string-keys_to_trim-array)
 * [week_of_month](#week_of_monthdate_expression-any-type)
+* [xml_to_json](#xml_to_jsonxml-string)
+* [xml_to_json_fpx](#xml_to_json_fpxxml-string)
 * [y4md_to_date](#y4md_to_datey4md-string)
 * [zeronorm](#zeronormx-any-type-meanx-float64-stddevx-float64)
 
@@ -448,8 +453,20 @@ SELECT bqutil.fn.cw_csvld('Test#123', '#', '"', 2);
 ["Test", "123"]
 ```
 
+### [cw_disjoint_all_partitions_by_regexp(haystack STRING, regex STRING)](cw_disjoint_all_partitions_by_regexp.sqlx)
+Partitions rows into disjoint segments and returns all the partitions by matching row-sequence with the provided regex pattern.
+```sql
+SELECT bqutil.fn.cw_disjoint_all_partitions_by_regexp(1, 'A@1#A@2#B@3#A@4#B@5#', '(?:A@\\d+#)+(?:B@\\d+#)')
+SELECT bqutil.fn.cw_disjoint_all_partitions_by_regexp(1, 'A@1#B@2#B@3#A@4#B@5#', '(?:A@\\d+#)+(?:B@\\d+#)')
+SELECT bqutil.fn.cw_disjoint_all_partitions_by_regexp(1, 'B@1#B@2#B@3#B@4#A@5#', '(?:A@\\d+#)+(?:B@\\d+#)')
+
+[(0, 1), (0, 2), (0, 3), (1, 4), (1, 5)]
+[(0, 1), (0, 2), (1, 4), (1, 5)]
+[]
+```
+
 ### [cw_disjoint_partition_by_regexp(firstRn INT64, haystack STRING, regex STRING)](cw_disjoint_partition_by_regexp.sqlx)
-Partitions rows into disjoint segments by matching their sequence with the provided regex pattern.
+Partitions rows into disjoint segments and returns a partition associated with the given row-number by matching row-sequence with the provided regex pattern.
 ```sql
 SELECT bqutil.fn.cw_disjoint_partition_by_regexp(1, 'A@1#A@2#B@3#A@4#B@5#', '(?:A@\\d+#)+(?:B@\\d+#)')
 SELECT bqutil.fn.cw_disjoint_partition_by_regexp(2, 'A@1#A@2#B@3#A@4#B@5#', '(?:A@\\d+#)+(?:B@\\d+#)')
@@ -517,10 +534,20 @@ SELECT bqutil.fn.cw_from_base('A', 16);
 ```
 
 ### [cw_getbit(bits INT64, index INT64)](cw_getbit.sqlx)
-Get bit on given inex.
+Return bit of INT64 input at given index, starting from 0 for the least significant bit.
 ```sql
 SELECT bqutil.fn.cw_getbit(11, 100);
 SELECT bqutil.fn.cw_getbit(11, 3);
+
+0
+1
+```
+
+### [cw_getbit_binary(bits BYTES, index INT64)](cw_getbit_binary.sqlx)
+Return bit of BYTES input at given index, starting from 0 for the least significant bit.
+```sql
+SELECT bqutil.fn.cw_getbit_binary(b'\x0B', 100);
+SELECT bqutil.fn.cw_getbit_binary(b'\x0B', 3);
 
 0
 1
@@ -820,7 +847,7 @@ SELECT bqutil.fn.cw_regexp_instr_4('TestStr123456Str', 'Str', 1, 3);
 ```
 
 ### [cw_regexp_instr_5(haystack STRING, regexp STRING, p INT64, o INT64, returnopt INT64)](cw_regexp_instr_5.sqlx)
-Takes input haystack string, needle string, starting positin from where search will start, number of occurance and returnopt number. Returns end index +1 of last needle. Mode can be g for global search, i for case insensetive search and m for multiline search.
+Takes input haystack string, needle string, starting position from where search will start, the 1-based number of match occurence which , and returnopt number. Returns end index +1 of last needle. Mode can be g for global search, i for case insensetive search and m for multiline search.
 ```sql
 SELECT bqutil.fn.cw_regexp_instr_5('TestStr123456', '123', 1, 1, 1);
 
@@ -844,7 +871,7 @@ SELECT bqutil.fn.cw_regexp_instr_generic('TestStr123456', 'Str', 1, 1, 1, 'g');
 ```
 
 ### [cw_regexp_replace_4(haystack STRING, regexp STRING, replacement STRING, offset INT64)](cw_regexp_replace_4.sqlx)
-Takes input haystack string, regular expression, replacement string and starting offset. It returns new string with replacement string matches accordingly regular expression.
+Takes input haystack string, regular expression, replacement string and 1-based starting offset. It returns new string with replacement string matches accordingly regular expression.
 ```sql
 SELECT bqutil.fn.cw_regexp_replace_4('TestStr123456', 'Str', 'Cad$', 1);
 
@@ -852,7 +879,7 @@ TestCad$123456
 ```
 
 ### [cw_regexp_replace_5(haystack STRING, regexp STRING, replacement STRING, offset INT64, occurrence INT64)](cw_regexp_replace_5.sqlx)
-Takes input haystack string, regular expression, replacement string, starting offset and number of occurence which we want to replace. It returns new string with replacement string matches accordingly regular expression.
+Takes input haystack string, regular expression, replacement string, 1-based starting offset, 1-based number of the occurence which we want to replace. It returns new string with replacement string matches accordingly regular expression.
 ```sql
 SELECT bqutil.fn.cw_regexp_replace_5('TestStr123456', 'Str', 'Cad$', 1, 1);
 SELECT bqutil.fn.cw_regexp_replace_5('TestStr123456Str', 'Str', 'Cad$', 1, 2);
@@ -864,7 +891,7 @@ TestCad$123456Str
 ```
 
 ### [cw_regexp_replace_6(haystack STRING, regexp STRING, replacement STRING, p INT64, o INT64, mode STRING)](cw_regexp_replace_6.sqlx)
-Takes input haystack string, regular expression, replacement string, starting offset, number of occurence which we want to replace and mode. It returns new string with replacement string matches accordingly regular expression. Mode can be g for global search, i for case insensetive search and m for multiline search.
+Takes input haystack string, regular expression, replacement string, 1-based starting offset, 1-based number of the occurence which we want to replace, and the mode. It returns new string with replacement string matches accordingly regular expression. Mode can be g for global search, i for case insensetive search and m for multiline search.
 ```sql
 SELECT bqutil.fn.cw_regexp_replace_6('TestStr123456', 'Str', '$:#>', 1, 1, 'i');
 
@@ -1936,6 +1963,7 @@ SELECT
 |-------------------------|-------------------------|-------------------------|
 | 2020-01-01 00:15:00 UTC | 2020-01-01 00:10:00 UTC | 2020-01-01 00:17:00 UTC |
 
+Consider using the built-in [TIMESTAMP_BUCKET](https://cloud.google.com/bigquery/docs/reference/standard-sql/time-series-functions#timestamp_bucket) function instead.
 
 ### [typeof(input ANY TYPE)](typeof.sqlx)
 
@@ -2064,6 +2092,47 @@ SELECT
 
 0 1
 ```
+
+### [xml_to_json(xml STRING)](xml_to_json.sqlx)
+Converts XML to JSON using the open source
+txml JavaScript library which is 2-3 times faster than the fast-xml-parser library. \
+NULL input is returned as NULL output. \
+Empty string input is returned as empty JSON object.
+
+* [txml repo](https://github.com/TobiasNickel/tXml)
+* [Benchmark details of comparison with fast-xml-parser](https://github.com/tobiasnickel/fast-xml-parser#benchmark)
+
+```sql
+SELECT bqutil.fn.xml_to_json(
+  '<xml foo="FOO"><bar><baz>BAZ</baz></bar></xml>'
+) AS output_json
+```
+
+results:
+
+| output_json |
+| ----------- |
+| {"xml":[{"_attributes":{"foo":"FOO"},"bar":[{"baz":["BAZ"]}]}]} |
+
+### [xml_to_json_fpx(xml STRING)](xml_to_json_fpx.sqlx)
+Converts XML to JSON using the open source
+fast-xml-parser JavaScript library. \
+NULL input is returned as NULL output. \
+Empty string input is returned as empty JSON object.
+
+* [fast-xml-parser repo](https://github.com/NaturalIntelligence/fast-xml-parser)
+* [List of options you can pass to the XMLParser object](https://github.com/NaturalIntelligence/fast-xml-parser/blob/master/docs/v4/2.XMLparseOptions.md)
+
+```sql
+SELECT bqutil.fn.xml_to_json_fpx(
+  '<xml foo="FOO"><bar><baz>BAZ</baz></bar></xml>'
+) as output_json
+```
+results:
+
+| output_json |
+| ----------- |
+| {"xml":{"@_foo":"FOO","bar":{"baz":"BAZ"}}} |
 
 ### [y4md_to_date(y4md STRING)](y4md_to_date.sqlx)
 Convert a STRING formatted as a YYYYMMDD to a DATE
@@ -2211,7 +2280,7 @@ The [Linear Regression](https://en.wikipedia.org/wiki/Linear_regression), is a l
 ```sql
 DECLARE data ARRAY<STRUCT<X STRING, Y FLOAT64>>;
 set data = [ (5.1,2.5), (5.0,2.0), (5.7,2.6), (6.0,2.2), (5.8,2.6), (5.5,2.3), (6.1,2.8), (5.5,2.5), (6.4,3.2), (5.6,3.0)];
-SELECT `bqutils.fn.linear_regression`(data) AS results;
+SELECT `bqutil.fn.linear_regression`(data) AS results;
 ```
 
 results:
@@ -2231,7 +2300,7 @@ The [chisquare_cdf](https://jstat.github.io/distributions.html#jStat.chisquare.c
 * Output: p FLOAT64
 
 ```sql
-SELECT `bqutils.fn.chisquare_cdf`(.3,2) AS results;
+SELECT `bqutil.fn.chisquare_cdf`(.3,2) AS results;
 ```
 
 results:
@@ -2258,7 +2327,7 @@ SELECT
     50.0  as d
 )
 SELECT
-    `bqutils.fn.p_fisherexact`(a,b,c,d) as pvalue
+    `bqutil.fn.p_fisherexact`(a,b,c,d) as pvalue
 FROM
    mydata
 ```
@@ -2282,7 +2351,7 @@ WITH mydata AS (
     [2, 4, 6, 2, 3, 7, 5, 1.] AS x,
     [8, 10, 11, 14, 20, 18, 19, 9. ] AS y
 )
-SELECT `bqutils.fn.mannwhitneyu`(y, x, 'two-sided') AS test
+SELECT `bqutil.fn.mannwhitneyu`(y, x, 'two-sided') AS test
 FROM mydata
 ```
 
@@ -2305,7 +2374,7 @@ DECLARE pop2 ARRAY<FLOAT64>;
 SET pop1 = [13.3,6.0,20.0,8.0,14.0,19.0,18.0,25.0,16.0,24.0,15.0,1.0,15.0];
 SET pop2 = [22.0,16.0,21.7,21.0,30.0,26.0,12.0,23.2,28.0,23.0] ;
 
-SELECT `bqutils.fn.t_test`(pop1, pop2) AS actual_result_rows;
+SELECT `bqutil.fn.t_test`(pop1, pop2) AS actual_result_rows;
 
 ```
 
@@ -2324,7 +2393,7 @@ Returns the value of x in the cdf of the Normal distribution with parameters mea
 Sample Query:
 
 ```SQL
-SELECT `bqutils.fn.normal_cdf`(1.1, 1.7, 2.0) as normal_cdf;
+SELECT `bqutil.fn.normal_cdf`(1.1, 1.7, 2.0) as normal_cdf;
 ```
 
 Results:
@@ -2332,3 +2401,21 @@ Results:
 | Row	| normal_cdf |
 |-----|-------------------|
 | 1	| 0.3820885778110474 |
+
+---
+
+### [studentt_cdf(x FLOAT64, dof FLOAT64)](studentt_cdf.sqlx)
+
+Returns the value of x in the cdf of the Student's T distribution with dof degrees of freedom.
+
+Sample Query:
+
+```SQL
+SELECT `bqutil.fn.studentt_cdf`(1.0, 2.0) as studentt_cdf;
+```
+
+Results:
+
+| Row | studentt_cdf      |
+| --- | ----------------- |
+| 1   | 0.788675134594813 |
